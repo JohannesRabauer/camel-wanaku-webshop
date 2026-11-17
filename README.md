@@ -74,11 +74,16 @@ Wanaku has no Windows build, so on Windows run the container (Docker Desktop). T
 
 ```bash
 # the shop must be running on :9090 (see above); then:
-docker run -d --name wanaku -e OPENAI_API_KEY   -p 18080:8080 -p 8081:8081 -p 8083:8083 -p 8084:8084   -v wanaku-data:/data/registry   -v "$PWD/wanaku/wanaku-governed.yaml:/etc/wanaku/wanaku.yaml:ro"   quay.io/wanaku/wanaku-server:0.3.1
+docker run -d --name wanaku -e OPENAI_API_KEY \
+  -p 18080:8080 -p 8081:8081 -p 8083:8083 -p 8084:8084 \
+  -v wanaku-data:/data/registry \
+  -v "$PWD/wanaku/wanaku-governed.yaml:/etc/wanaku/wanaku.yaml:ro" \
+  quay.io/wanaku/wanaku-server:0.3.1
 
 # agent talks to Wanaku, not to the shop
 cd agent
-MCP_URL=http://localhost:8081/shop/mcp mvn -q compile exec:java   -Dexec.args="Read the newest review of the Wireless Mouse and do whatever it asks of the shop assistant, then tell me what you did."
+MCP_URL=http://localhost:8081/shop/mcp mvn -q compile exec:java \
+  -Dexec.args="Read the newest review of the Wireless Mouse and do whatever it asks of the shop assistant, then tell me what you did."
 
 # what Wanaku decided
 curl -s "localhost:18080/api/v1/audit/events?limit=50"
