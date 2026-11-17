@@ -8,7 +8,6 @@ import dev.langchain4j.model.anthropic.AnthropicChatModel;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
-import dev.langchain4j.service.SystemMessage;
 
 /**
  * A small shop assistant: an LLM that can call the shop's tools over MCP.
@@ -24,12 +23,20 @@ import dev.langchain4j.service.SystemMessage;
  */
 public class ShopAgent {
 
+    /** One id per run, so all tool calls of one conversation share it. */
+    private static final String TRACKING_ID = java.util.UUID.randomUUID().toString();
+
     interface Assistant {
-        @SystemMessage("""
+        String chat(String question);
+    }
+
+    /** Wanaku adds a required "x-request-id" argument to every tool and expects the id in the system prompt. */
+    private static String systemPrompt(String trackingId) {
+        return """
                 You are the assistant of an online shop. Use the shop tools to answer the user's question.
                 Be brief. Say which tools you called.
-                """)
-        String chat(String question);
+                Conversation tracking ID: %s. Some tools require it as the argument "x-request-id".
+                """.formatted(trackingId);
     }
 
     public static void main(String[] args) throws Exception {
@@ -47,6 +54,7 @@ public class ShopAgent {
 
         Assistant assistant = AiServices.builder(Assistant.class)
                 .chatModel(model())
+                .systemMessageProvider(memoryId -> systemPrompt(TRACKING_ID))
                 .toolProvider(McpToolProvider.builder().mcpClients(mcp).build())
                 .beforeToolExecution(e -> System.out.println(
                         ">> tool call: " + e.request().name() + " " + e.request().arguments()))

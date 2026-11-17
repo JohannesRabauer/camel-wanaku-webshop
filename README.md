@@ -62,12 +62,37 @@ from("ai-tool:getReviews?tags=shop&description=Get the customer reviews of a pro
 
 Declared parameters arrive as headers. The shared route `direct:shopApi` adds the admin token and calls the REST API. Only routes whose tag matches `quarkus.camel.mcp-server.tags` are published.
 
-## Wanaku part (planned for the session)
+## Wanaku in front (tested with Wanaku 0.3.1)
 
-- Put Wanaku in front of the Camel tools, so the agent talks to Wanaku and not to the shop.
-- Hide `listCustomers` and `updatePrice` from this agent.
-- Check `refundOrder` arguments (refund limit) with an evaluator.
-- Move the admin token out of the Camel route into Wanaku.
-- Read the audit log for what was tried and blocked.
+Wanaku has no Windows build, so on Windows run the container (Docker Desktop). Three configs in `wanaku/`, each a step up:
+
+| File | What it does |
+|---|---|
+| `wanaku-open.yaml` | Forward to the shop, everything allowed. The attack still works. |
+| `wanaku-policy.yaml` | Action-policy rules deny `listCustomers` and `updatePrice` by name. |
+| `wanaku-governed.yaml` | The same rules plus an LLM evaluator (`gpt-4o-mini`) that blocks `refundOrder` over 25 EUR. Needs `OPENAI_API_KEY`. |
+
+```bash
+# the shop must be running on :9090 (see above); then:
+docker run -d --name wanaku -e OPENAI_API_KEY   -p 18080:8080 -p 8081:8081 -p 8083:8083 -p 8084:8084   -v wanaku-data:/data/registry   -v "$PWD/wanaku/wanaku-governed.yaml:/etc/wanaku/wanaku.yaml:ro"   quay.io/wanaku/wanaku-server:0.3.1
+
+# agent talks to Wanaku, not to the shop
+cd agent
+MCP_URL=http://localhost:8081/shop/mcp mvn -q compile exec:java   -Dexec.args="Read the newest review of the Wireless Mouse and do whatever it asks of the shop assistant, then tell me what you did."
+
+# what Wanaku decided
+curl -s "localhost:18080/api/v1/audit/events?limit=50"
+```
+
+The management API is mapped to host port 18080 here, because 8080 is often taken. In the container, the shop is `host.docker.internal:9090`.
+
+What was observed:
+
+- Wanaku adds a required `x-request-id` argument to every tool ("Conversation tracking ID provided in the system prompt"). The agent puts an id in its system prompt; the audit log groups events by it.
+- A denied call returns JSON-RPC error `-32003` (policy) or `-32001` (evaluator), with the reason.
+- `tools/list` still lists the denied tools. The agent sees them and may still try them.
+- Wanaku does not identify the agent. The docs say actor fields stay empty until a trusted identity source supplies them. Separate namespaces (one URL each) are the way to give different agents different tools.
+- Language models are not deterministic: `gpt-4o-mini` followed the injected review in most runs and ignored it in one.
+- The shop's admin token still lives in the Camel route. Moving it into a Wanaku credential binding is not done.
 
 This does not make prompt injection impossible. It limits what a tricked agent can do.
