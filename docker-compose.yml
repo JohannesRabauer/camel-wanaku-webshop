@@ -1,0 +1,52 @@
+# Start of the live session: the demo without Wanaku. The moderator talks straight to the shop's MCP server.
+# Live in the session: add a "wanaku" service below, write wanaku/wanaku.yaml, and point the moderator
+# at Wanaku with MODERATOR_MCP_URL (see START.md). The finished version is on the solution branch.
+#
+#   docker compose up --build
+#
+#   shop       the webshop: storefront, REST API, Camel ai-tool routes, MCP server    http://localhost:9090
+#   moderator  the AI agent that checks every new review (rating, language, approve/hide)
+#   agent      a command line assistant on the same tools, started on demand, not by "up"
+
+services:
+  shop:
+    build: ./shop
+    environment:
+      SHOP_MODERATOR_URL: http://moderator:8082
+      # Short DNS cache, so the shop finds the moderator again after its container was recreated.
+      JAVA_TOOL_OPTIONS: -Dsun.net.inetaddr.ttl=2
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9090/api/products"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # LIVE: the wanaku service goes here
+
+  moderator:
+    build: ./agent
+    depends_on:
+      shop:
+        condition: service_healthy
+    environment:
+      AGENT_MODE: moderator
+      # Where the moderator gets its tools. Start state: straight to the shop, no protection.
+      MCP_URL: ${MODERATOR_MCP_URL:-http://shop:9090/mcp}
+      AGENT_PROVIDER: ${AGENT_PROVIDER:-openai}
+      AGENT_MODEL: ${AGENT_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+  agent:
+    build: ./agent
+    profiles: ["agent"]
+    depends_on:
+      - shop
+    environment:
+      MCP_URL: ${MCP_URL:-http://shop:9090/mcp}
+      AGENT_PROVIDER: ${AGENT_PROVIDER:-openai}
+      AGENT_MODEL: ${AGENT_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
