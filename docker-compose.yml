@@ -1,14 +1,18 @@
 # The whole demo with one command:  docker compose up --build
 #
-#   shop    the webshop (storefront, REST API, Camel ai-tool routes, MCP server)  http://localhost:9090
-#   wanaku  the governed proxy in front of the shop's MCP server                  http://localhost:8081/shop/mcp
-#   agent   the AI shop assistant, started on demand (see README), not by "up"
+#   shop       the webshop: storefront, REST API, Camel ai-tool routes, MCP server    http://localhost:9090
+#   moderator  the AI agent that checks every new review (rating, language, approve/hide)
+#   wanaku     the governed proxy between moderator and shop                          http://localhost:8081/moderation/mcp
+#   agent      a command line assistant on the same tools, started on demand (see README), not by "up"
 #
-# Which Wanaku rules apply: WANAKU_CONFIG=wanaku-open.yaml | wanaku-policy.yaml | wanaku-governed.yaml (default)
+# Which Wanaku rules apply: WANAKU_CONFIG=wanaku-open.yaml | wanaku-policy.yaml (default)
+# Which tools the moderator can reach: MODERATOR_MCP_URL, through Wanaku (default) or straight to the shop
 
 services:
   shop:
     build: ./shop
+    environment:
+      SHOP_MODERATOR_URL: http://moderator:8082
     ports:
       - "9090:9090"
     healthcheck:
@@ -22,15 +26,28 @@ services:
     depends_on:
       shop:
         condition: service_healthy
-    environment:
-      # Only the LLM evaluator in wanaku-governed.yaml needs it.
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
       - "${WANAKU_MCP_PORT:-8081}:8081"      # MCP endpoint, one URL per namespace
       - "${WANAKU_ADMIN_PORT:-18080}:8080"   # management and audit API (18080, because 8080 is often taken)
     volumes:
       - wanaku-data:/data/registry
-      - ./wanaku/${WANAKU_CONFIG:-wanaku-governed.yaml}:/etc/wanaku/wanaku.yaml:ro
+      - ./wanaku/${WANAKU_CONFIG:-wanaku-policy.yaml}:/etc/wanaku/wanaku.yaml:ro
+
+  moderator:
+    build: ./agent
+    depends_on:
+      shop:
+        condition: service_healthy
+      wanaku:
+        condition: service_started
+    environment:
+      AGENT_MODE: moderator
+      # Through Wanaku by default. Unprotected, straight to the shop: MODERATOR_MCP_URL=http://shop:9090/mcp
+      MCP_URL: ${MODERATOR_MCP_URL:-http://wanaku:8081/moderation/mcp}
+      AGENT_PROVIDER: ${AGENT_PROVIDER:-openai}
+      AGENT_MODEL: ${AGENT_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
 
   agent:
     build: ./agent
@@ -39,8 +56,7 @@ services:
       - shop
       - wanaku
     environment:
-      # Through Wanaku by default. For the unprotected run: MCP_URL=http://shop:9090/mcp
-      MCP_URL: ${MCP_URL:-http://wanaku:8081/shop/mcp}
+      MCP_URL: ${MCP_URL:-http://wanaku:8081/moderation/mcp}
       AGENT_PROVIDER: ${AGENT_PROVIDER:-openai}
       AGENT_MODEL: ${AGENT_MODEL:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

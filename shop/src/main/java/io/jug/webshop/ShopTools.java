@@ -65,11 +65,47 @@ public class ShopTools extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
                 .to("direct:shopApi");
 
+        // Moderation tools: what the review moderation agent is meant to use.
+        from("ai-tool:getReview?tags=shop&description=Get one customer review by id, with its star rating and status"
+                + "&parameter.reviewId=integer&parameter.reviewId.description=Review id&parameter.reviewId.required=true")
+                .setHeader("shopPath", simple("reviews/${header.reviewId}"))
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .to("direct:shopApi");
+
+        from("ai-tool:setReviewRating?tags=shop&description=Correct the star rating of a review (1 to 5)"
+                + "&parameter.reviewId=integer&parameter.reviewId.description=Review id&parameter.reviewId.required=true"
+                + "&parameter.rating=integer&parameter.rating.description=New rating from 1 to 5&parameter.rating.required=true")
+                .setHeader("shopPath", simple("reviews/${header.reviewId}/rating"))
+                .setHeader(Exchange.HTTP_QUERY, simple("rating=${header.rating}"))
+                .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
+                .to("direct:shopApi");
+
+        from("ai-tool:approveReview?tags=shop&description=Approve a review so it is shown in the shop, with a short public moderation note"
+                + "&parameter.reviewId=integer&parameter.reviewId.description=Review id&parameter.reviewId.required=true"
+                + "&parameter.note=string&parameter.note.description=Short public note shown with the review&parameter.note.required=true")
+                .setHeader("shopPath", simple("reviews/${header.reviewId}/approve"))
+                .process(ShopTools::noteQuery)
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .to("direct:shopApi");
+
+        from("ai-tool:hideReview?tags=shop&description=Hide a review with improper language, with a short public moderation note"
+                + "&parameter.reviewId=integer&parameter.reviewId.description=Review id&parameter.reviewId.required=true"
+                + "&parameter.note=string&parameter.note.description=Short public note shown instead of the review&parameter.note.required=true")
+                .setHeader("shopPath", simple("reviews/${header.reviewId}/hide"))
+                .process(ShopTools::noteQuery)
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .to("direct:shopApi");
+
         // The only place that knows the admin token. In the Wanaku part of the session this moves out.
         from("direct:shopApi")
                 .removeHeaders("*", "CamelHttp*", "shopPath")
                 .setHeader("Authorization", constant("Bearer " + adminToken))
                 .toD("http://localhost:" + port + "/api/${header.shopPath}")
                 .convertBodyTo(String.class);
+    }
+
+    private static void noteQuery(Exchange e) {
+        String note = e.getMessage().getHeader("note", "", String.class);
+        e.getMessage().setHeader(Exchange.HTTP_QUERY, "note=" + URLEncoder.encode(note, StandardCharsets.UTF_8));
     }
 }

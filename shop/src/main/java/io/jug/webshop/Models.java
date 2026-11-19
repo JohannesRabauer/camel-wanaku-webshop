@@ -7,7 +7,9 @@ public final class Models {
     public record Product(int id, String name, double price, String description) {
     }
 
-    public record Review(int id, int productId, String author, String text) {
+    /** status is PENDING until the moderation agent approves or hides the review. The note is public. */
+    public record Review(int id, int productId, String author, int rating, String text, String status,
+                         String moderationNote) {
     }
 
     public record Customer(int id, String name, String email) {
@@ -19,7 +21,7 @@ public final class Models {
     public record OrderStatus(int id, int productId, double amount, String status) {
     }
 
-    public record NewReview(String author, String text) {
+    public record NewReview(String author, int rating, String text) {
     }
 
     public record Refund(int orderId, double amount, String status) {

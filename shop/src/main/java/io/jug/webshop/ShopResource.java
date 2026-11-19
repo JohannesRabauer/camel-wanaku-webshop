@@ -16,6 +16,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.camel.ProducerTemplate;
 
 import java.util.List;
 
@@ -26,6 +27,9 @@ public class ShopResource {
 
     @Inject
     ShopData data;
+
+    @Inject
+    ProducerTemplate camel;
 
     @GET
     @Path("/products")
@@ -45,7 +49,10 @@ public class ShopResource {
         return data.reviews(id);
     }
 
-    /** Open to everyone, like on a real shop: any visitor can write a review. */
+    /**
+     * Open to everyone, like on a real shop. The new review is PENDING; a Camel route
+     * (ModerationTrigger) hands it to the moderation agent.
+     */
     @POST
     @Path("/products/{id}/reviews")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -53,8 +60,12 @@ public class ShopResource {
         if (body == null || body.text() == null || body.text().isBlank()) {
             return Response.status(400).entity("text is required").build();
         }
-        Review created = data.addReview(id, body.author(), body.text());
-        return created == null ? Response.status(404).build() : Response.status(201).entity(created).build();
+        Review created = data.addReview(id, body.author(), body.rating(), body.text());
+        if (created == null) {
+            return Response.status(404).build();
+        }
+        camel.sendBody("seda:reviewPosted", created.id());
+        return Response.status(201).entity(created).build();
     }
 
     /** Order id and status only, for the storefront's "shop owner view". */
@@ -71,6 +82,34 @@ public class ShopResource {
         data.reset();
         return Response.noContent().build();
     }
+
+    // Moderation: admin token required. These are what the moderation tools call.
+
+    @GET
+    @Path("/reviews/{id}")
+    public Response review(@PathParam("id") int id) {
+        return orNotFound(data.review(id));
+    }
+
+    @PUT
+    @Path("/reviews/{id}/rating")
+    public Response setRating(@PathParam("id") int id, @QueryParam("rating") int rating) {
+        return orNotFound(data.setRating(id, rating));
+    }
+
+    @POST
+    @Path("/reviews/{id}/approve")
+    public Response approve(@PathParam("id") int id, @QueryParam("note") String note) {
+        return orNotFound(data.moderate(id, ShopData.APPROVED, note));
+    }
+
+    @POST
+    @Path("/reviews/{id}/hide")
+    public Response hide(@PathParam("id") int id, @QueryParam("note") String note) {
+        return orNotFound(data.moderate(id, ShopData.HIDDEN, note));
+    }
+
+    // Back office: admin token required.
 
     @GET
     @Path("/customers")

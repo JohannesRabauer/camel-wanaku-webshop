@@ -1,10 +1,12 @@
-# Step 1: Wanaku in front of the shop, everything allowed (no protection yet).
+# Step 1: Wanaku only forwards. Everything the shop offers reaches the agent, the attack still works.
+# The shop's MCP server is registered as a "forward". Its tools appear under the namespace "moderation",
+# so the moderation agent connects to http://localhost:8081/moderation/mcp.
 forwards:
   - name: shop
     address: "http://shop:9090/mcp"
-    namespace: shop
+    namespace: moderation
 
 governance:
   namespaces:
-    shop:
+    moderation:
       no_match: allow

@@ -1,34 +1,86 @@
-# Step 2: action-policy rules. Deterministic: names, no LLM.
+# Step 2: the moderation agent may not use the six tools it does not need. Only getReview,
+# setReviewRating, approveReview and hideReview stay. No LLM involved, the rules are deterministic.
+#
+# This is a deny list: a tool that is added to the shop later is allowed until someone adds a rule.
+# Default deny (no_match: deny) did not work in 0.3.1 with plain allow rules: an action-policy allow does
+# not skip the evaluator layer, and the evaluator layer has no match for these tools.
 forwards:
   - name: shop
     address: "http://shop:9090/mcp"
-    namespace: shop
+    namespace: moderation
 
 action_policy:
   rules:
-    - id: deny-customer-data
-      description: The shop assistant has no business reading customer emails
+    - id: deny-searchProducts
+      description: Product search is not part of moderation
       effect: deny
       selectors:
-        namespace: shop
+        namespace: moderation
+        operation: tools/call
+        target_type: tool
+        target_name: { matcher: exact, value: searchProducts }
+      reason_code: not_a_moderation_tool
+      message: The moderation agent may not use searchProducts.
+
+    - id: deny-getReviews
+      description: Reading all reviews of a product is not part of moderation
+      effect: deny
+      selectors:
+        namespace: moderation
+        operation: tools/call
+        target_type: tool
+        target_name: { matcher: exact, value: getReviews }
+      reason_code: not_a_moderation_tool
+      message: The moderation agent may not use getReviews.
+
+    - id: deny-getOrder
+      description: Orders are not part of moderation
+      effect: deny
+      selectors:
+        namespace: moderation
+        operation: tools/call
+        target_type: tool
+        target_name: { matcher: exact, value: getOrder }
+      reason_code: not_a_moderation_tool
+      message: The moderation agent may not use getOrder.
+
+    - id: deny-refundOrder
+      description: A moderator never refunds anything
+      effect: deny
+      selectors:
+        namespace: moderation
+        operation: tools/call
+        target_type: tool
+        target_name: { matcher: exact, value: refundOrder }
+      reason_code: not_a_moderation_tool
+      message: The moderation agent may not use refundOrder.
+
+    - id: deny-listCustomers
+      description: A moderator has no business with customer emails
+      effect: deny
+      selectors:
+        namespace: moderation
         operation: tools/call
         target_type: tool
         target_name: { matcher: exact, value: listCustomers }
-      reason_code: customer_data_denied
-      message: This assistant may not list customers.
+      reason_code: not_a_moderation_tool
+      message: The moderation agent may not use listCustomers.
 
-    - id: deny-price-changes
+    - id: deny-updatePrice
+      description: A moderator never changes prices
       effect: deny
       selectors:
-        namespace: shop
+        namespace: moderation
         operation: tools/call
         target_type: tool
         target_name: { matcher: exact, value: updatePrice }
-      reason_code: price_change_denied
-      message: This assistant may not change prices.
+      reason_code: not_a_moderation_tool
+      message: The moderation agent may not use updatePrice.
 
 governance:
   namespaces:
-    shop:
-      # Everything that no rule matches is allowed (the evaluator comes in step 3).
+    moderation:
       no_match: allow
+
+audit:
+  max_records: 1000
