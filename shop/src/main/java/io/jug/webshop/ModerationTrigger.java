@@ -21,6 +21,9 @@ public class ModerationTrigger extends RouteBuilder {
     public void configure() {
         from("seda:reviewPosted")
                 .onException(Exception.class)
+                    // The agent may be restarting (new container, new address): try again for a while.
+                    .maximumRedeliveries(5)
+                    .redeliveryDelay(3000)
                     .handled(true)
                     .log(LoggingLevel.WARN, "Moderation agent not reachable, review ${body} stays PENDING: ${exception.message}")
                 .end()

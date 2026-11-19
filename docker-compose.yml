@@ -13,6 +13,8 @@ services:
     build: ./shop
     environment:
       SHOP_MODERATOR_URL: http://moderator:8082
+      # Short DNS cache, so the shop finds the moderator again after its container was recreated.
+      JAVA_TOOL_OPTIONS: -Dsun.net.inetaddr.ttl=2
     ports:
       - "9090:9090"
     healthcheck:
