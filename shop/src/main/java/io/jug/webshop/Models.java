@@ -16,6 +16,12 @@ public final class Models {
     public record Order(int id, int customerId, int productId, double amount, String status, String note) {
     }
 
+    public record OrderStatus(int id, int productId, double amount, String status) {
+    }
+
+    public record NewReview(String author, String text) {
+    }
+
     public record Refund(int orderId, double amount, String status) {
     }
 }
