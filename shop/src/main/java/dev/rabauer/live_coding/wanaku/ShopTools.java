@@ -1,4 +1,4 @@
-package io.jug.webshop;
+package dev.rabauer.live_coding.wanaku;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.apache.camel.Exchange;

@@ -1,11 +1,11 @@
-package io.jug.webshop;
+package dev.rabauer.live_coding.wanaku;
 
-import io.jug.webshop.Models.Customer;
-import io.jug.webshop.Models.Order;
-import io.jug.webshop.Models.OrderStatus;
-import io.jug.webshop.Models.Product;
-import io.jug.webshop.Models.Refund;
-import io.jug.webshop.Models.Review;
+import dev.rabauer.live_coding.wanaku.Models.Customer;
+import dev.rabauer.live_coding.wanaku.Models.Order;
+import dev.rabauer.live_coding.wanaku.Models.OrderStatus;
+import dev.rabauer.live_coding.wanaku.Models.Product;
+import dev.rabauer.live_coding.wanaku.Models.Refund;
+import dev.rabauer.live_coding.wanaku.Models.Review;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.Comparator;

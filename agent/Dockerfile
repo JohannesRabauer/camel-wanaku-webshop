@@ -12,4 +12,4 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /build/target/classes ./classes
 COPY --from=build /build/target/dependency ./lib
-ENTRYPOINT ["java", "-cp", "classes:lib/*", "io.jug.webshop.agent.ShopAgent"]
+ENTRYPOINT ["java", "-cp", "classes:lib/*", "dev.rabauer.live_coding.wanaku.agent.ShopAgent"]

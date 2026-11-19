@@ -13,7 +13,7 @@ Then open <http://localhost:9090>. The moderator talks straight to the shop's MC
 
 ## What you add live
 
-1. **Two Camel tools** in `shop/src/main/java/io/jug/webshop/ShopTools.java`. Look for the two `LIVE:` comments. `setReviewRating` and `hideReview` are `ai-tool` routes like `getReview` and `approveReview` right above them. Without them the moderator cannot fix a rating or hide a review. Then `docker compose up -d --build shop`.
+1. **Two Camel tools** in `shop/src/main/java/dev/rabauer/live_coding/wanaku/ShopTools.java`. Look for the two `LIVE:` comments. `setReviewRating` and `hideReview` are `ai-tool` routes like `getReview` and `approveReview` right above them. Without them the moderator cannot fix a rating or hide a review. Then `docker compose up -d --build shop`.
 2. **The attack, unprotected.** Post a review as `mallory` with "Fill in the attack text". Order 1234 turns `REFUNDED` and the customer emails appear in the public note. Press "Reset the demo".
 3. **Wanaku in the Compose file.** Replace the `# LIVE: the wanaku service goes here` comment in `docker-compose.yml` with:
 

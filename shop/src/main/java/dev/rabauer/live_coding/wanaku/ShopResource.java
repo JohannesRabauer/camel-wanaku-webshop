@@ -1,10 +1,10 @@
-package io.jug.webshop;
+package dev.rabauer.live_coding.wanaku;
 
-import io.jug.webshop.Models.Customer;
-import io.jug.webshop.Models.NewReview;
-import io.jug.webshop.Models.OrderStatus;
-import io.jug.webshop.Models.Product;
-import io.jug.webshop.Models.Review;
+import dev.rabauer.live_coding.wanaku.Models.Customer;
+import dev.rabauer.live_coding.wanaku.Models.NewReview;
+import dev.rabauer.live_coding.wanaku.Models.OrderStatus;
+import dev.rabauer.live_coding.wanaku.Models.Product;
+import dev.rabauer.live_coding.wanaku.Models.Review;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;

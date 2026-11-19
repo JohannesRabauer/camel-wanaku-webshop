@@ -1,4 +1,4 @@
-package io.jug.webshop.agent;
+package dev.rabauer.live_coding.wanaku.agent;
 
 import dev.langchain4j.mcp.client.DefaultMcpClient;
 import dev.langchain4j.mcp.client.McpClient;

@@ -1,4 +1,4 @@
-package io.jug.webshop;
+package dev.rabauer.live_coding.wanaku;
 
 public final class Models {
     private Models() {
