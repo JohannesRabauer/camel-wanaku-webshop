@@ -1,7 +1,7 @@
 # Step 2: action-policy rules. Deterministic: names, no LLM.
 forwards:
   - name: shop
-    address: "http://host.docker.internal:9090/mcp"
+    address: "http://shop:9090/mcp"
     namespace: shop
 
 action_policy:

@@ -1,7 +1,7 @@
 # Step 1: Wanaku in front of the shop, everything allowed (no protection yet).
 forwards:
   - name: shop
-    address: "http://host.docker.internal:9090/mcp"
+    address: "http://shop:9090/mcp"
     namespace: shop
 
 governance:

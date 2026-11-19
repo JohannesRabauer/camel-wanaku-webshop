@@ -2,7 +2,7 @@
 # Needs OPENAI_API_KEY in the container environment (docker run -e OPENAI_API_KEY ...).
 forwards:
   - name: shop
-    address: "http://host.docker.internal:9090/mcp"
+    address: "http://shop:9090/mcp"
     namespace: shop
 
 action_policy:

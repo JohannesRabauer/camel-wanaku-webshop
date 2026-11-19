@@ -1,0 +1,50 @@
+# The whole demo with one command:  docker compose up --build
+#
+#   shop    the webshop (storefront, REST API, Camel ai-tool routes, MCP server)  http://localhost:9090
+#   wanaku  the governed proxy in front of the shop's MCP server                  http://localhost:8081/shop/mcp
+#   agent   the AI shop assistant, started on demand (see README), not by "up"
+#
+# Which Wanaku rules apply: WANAKU_CONFIG=wanaku-open.yaml | wanaku-policy.yaml | wanaku-governed.yaml (default)
+
+services:
+  shop:
+    build: ./shop
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9090/api/products"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  wanaku:
+    image: quay.io/wanaku/wanaku-server:0.3.1
+    depends_on:
+      shop:
+        condition: service_healthy
+    environment:
+      # Only the LLM evaluator in wanaku-governed.yaml needs it.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "${WANAKU_MCP_PORT:-8081}:8081"      # MCP endpoint, one URL per namespace
+      - "${WANAKU_ADMIN_PORT:-18080}:8080"   # management and audit API (18080, because 8080 is often taken)
+    volumes:
+      - wanaku-data:/data/registry
+      - ./wanaku/${WANAKU_CONFIG:-wanaku-governed.yaml}:/etc/wanaku/wanaku.yaml:ro
+
+  agent:
+    build: ./agent
+    profiles: ["agent"]
+    depends_on:
+      - shop
+      - wanaku
+    environment:
+      # Through Wanaku by default. For the unprotected run: MCP_URL=http://shop:9090/mcp
+      MCP_URL: ${MCP_URL:-http://wanaku:8081/shop/mcp}
+      AGENT_PROVIDER: ${AGENT_PROVIDER:-openai}
+      AGENT_MODEL: ${AGENT_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+volumes:
+  wanaku-data:
