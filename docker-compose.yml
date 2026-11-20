@@ -23,7 +23,18 @@ services:
       timeout: 3s
       retries: 20
 
-  # LIVE: the wanaku service goes here
+  wanaku:
+    image: quay.io/wanaku/wanaku-server:0.3.1
+    depends_on:
+      shop:
+        condition: service_healthy
+    ports:
+      - "8081:8081"      # MCP, one URL per namespace
+      - "18080:8080"     # management and audit API
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}   # used by the safety evaluator's LLM connection
+    volumes:
+      - ./wanaku/wanaku.yaml:/etc/wanaku/wanaku.yaml:ro
 
   moderator:
     build: ./agent
@@ -33,7 +44,7 @@ services:
     environment:
       AGENT_MODE: moderator
       # Where the moderator gets its tools. Start state: straight to the shop, no protection.
-      MCP_URL: ${MODERATOR_MCP_URL:-http://shop:9090/mcp}
+      MCP_URL: ${MODERATOR_MCP_URL:-http://wanaku:8081/moderation/mcp}
       AGENT_PROVIDER: ${AGENT_PROVIDER:-openai}
       AGENT_MODEL: ${AGENT_MODEL:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
